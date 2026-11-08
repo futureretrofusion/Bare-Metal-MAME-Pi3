@@ -14,24 +14,45 @@
 .type _start, %function
 _start:
     cpsid if
-    mrc p15, 0, r0, c0, c0, 5   /* MPIDR: low bits = Pi 3 core index */
+    mrc p15, 0, r0, c0, c0, 5    /* MPIDR: low bits = Pi 3 core index */
     and r0, r0, #3
     cmp r0, #0
     bne frf_secondary_park
 
-    /* The firmware has already loaded the image and configured SDRAM.
-       Establish our own stacks and exception vector base. */
-    cps #0x13                     /* SVC */
+    /* Legacy Pi 3 firmware may deliver an AArch32 kernel in HYP mode.
+       A normal CPS mode change cannot leave HYP; use ERET to PL1 SVC. */
+    mrs r0, cpsr
+    and r1, r0, #0x1f
+    cmp r1, #0x1a               /* ARM_MODE_HYP */
+    bne frf_privilege_ready
+    bic r0, r0, #0x1f
+    orr r0, r0, #0xd3           /* SVC, IRQ and FIQ masked */
+    msr spsr_cxsf, r0
+    adr r1, frf_privilege_ready
+    msr ELR_hyp, r1
+    eret
+frf_privilege_ready:
+    /* Firmware loads SDRAM; do not initialize DRAM controller here.
+       Turn off ARM D-cache before this test program touches shared
+       VideoCore mailbox/scanout memory. MMU is firmware-disabled. */
+    mrc p15, 0, r0, c1, c0, 0
+    bic r0, r0, #4            /* SCTLR.C: D-cache off */
+    bic r0, r0, #0x2000       /* SCTLR.V: use programmable VBAR */
+    mcr p15, 0, r0, c1, c0, 0
+    dsb sy
+    isb
+
+    cps #0x13                   /* SVC */
     ldr sp, =frf_svc_stack_end
-    cps #0x1b                     /* Undefined instruction */
+    cps #0x1b                   /* Undefined instruction */
     ldr sp, =frf_und_stack_end
-    cps #0x17                     /* Abort */
+    cps #0x17                   /* Abort */
     ldr sp, =frf_abt_stack_end
-    cps #0x12                     /* IRQ */
+    cps #0x12                   /* IRQ */
     ldr sp, =frf_irq_stack_end
-    cps #0x11                     /* FIQ */
+    cps #0x11                   /* FIQ */
     ldr sp, =frf_fiq_stack_end
-    cps #0x13                     /* SVC */
+    cps #0x13                   /* SVC */
     ldr sp, =frf_svc_stack_end
 
     ldr r0, =__bss_start__
