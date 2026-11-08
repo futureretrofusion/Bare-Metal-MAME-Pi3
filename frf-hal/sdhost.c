@@ -37,8 +37,16 @@
 #define GPIO_BASE 0x3F200000u
 #define GPIO_FSEL4 (GPIO_BASE+0x10u)
 #define GPIO_FSEL5 (GPIO_BASE+0x14u)
+/* Optional deterministic host MMIO mock; never enabled for ARM32 images. */
+#if defined(FRF_SDHOST_MOCK)
+extern uint32_t frf_sdhost_mock_read32(uint32_t address);
+extern void frf_sdhost_mock_write32(uint32_t address,uint32_t value);
+static uint32_t read32(uint32_t a){return frf_sdhost_mock_read32(a);}
+static void write32(uint32_t a,uint32_t v){frf_sdhost_mock_write32(a,v);}
+#else
 static uint32_t read32(uint32_t a){return *(volatile uint32_t *)(uintptr_t)a;}
 static void write32(uint32_t a,uint32_t v){*(volatile uint32_t *)(uintptr_t)a=v;}
+#endif
 static int wait_clear(uint32_t reg,uint32_t mask,uint32_t timeout_us){
     uint64_t start=frf_hal_time_us();
     while(read32(reg)&mask) {
@@ -70,7 +78,9 @@ static void setup_gpio(void) {
         v=(v&~(7u<<shift))|(4u<<shift);
     }
     write32(GPIO_FSEL5,v);
+#if defined(__arm__)
     __asm__ volatile("dsb sy" ::: "memory");
+#endif
 }
 void frf_sdhost_probe(frf_sdhost *dev) {
     if(!dev)return;

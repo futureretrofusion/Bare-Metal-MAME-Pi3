@@ -118,3 +118,18 @@ Public hardware references:
 
 **Next:** verify Pi 3 SDHOST reads from a disposable card, then
 provide a unified ROM/GUI kernel and full MAME 0.106 OSD file adapter.
+
+## Deterministic SDHOST controller simulation
+
+`make -C frf-hal host-test-sdhost-mock` compiles the **same**
+`sdhost.c` control flow with a synthetic MMIO register backend.
+This test is native-only and never touches real BCM registers.
+
+The test covers CMD0/CMD8/CMD55/ACMD41/CMD2/CMD3/CMD7,
+SDSC CMD16, SDHC and SDSC address conversion, a complete
+128-word CMD17 PIO read, data errors, card RCA failure, and
+bounded command timeouts. It also verifies GPIO48–53 alternate
+function writes and asserts that CMD24/CMD25 are never emitted.
+
+Results: **PASS** on Studio Main under AddressSanitizer and UBSan.
+The real Pi3 hardware path is still unverified.

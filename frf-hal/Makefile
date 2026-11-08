@@ -239,3 +239,9 @@ host-test-file-pool: | $(BUILD)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -fsanitize=address,undefined -o $(BUILD)/host-test-file-pool tests/test_file_pool.c fat32.c file_pool.c
 	@test -n "$(FRF_FAT32_IMAGE)" || { echo "Set FRF_FAT32_IMAGE to a disposable FAT32 image"; exit 2; }
 	$(BUILD)/host-test-file-pool $(FRF_FAT32_IMAGE)
+
+# Full register-command state machine tested with deterministic SDHOST MMIO.
+.PHONY: host-test-sdhost-mock
+host-test-sdhost-mock: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -DFRF_SDHOST_MOCK -fsanitize=address,undefined -o $(BUILD)/host-test-sdhost-mock tests/test_sdhost_mock.c sdhost.c
+	$(BUILD)/host-test-sdhost-mock

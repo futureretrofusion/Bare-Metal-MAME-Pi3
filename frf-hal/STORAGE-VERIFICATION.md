@@ -50,3 +50,22 @@ Full MAME OSD bindings, ROM ZIP content handling, FAT writes and
 HDMI audio remain unimplemented.
 
 See `STORAGE-TEST.md` for reproducible UART hardware test instructions.
+
+## Full SDHOST MMIO state-machine simulation
+
+Command:
+
+```sh
+make -C frf-hal host-test-sdhost-mock
+```
+
+Result: **PASS** (native GCC with AddressSanitizer + UBSan).
+The test uses the actual `sdhost.c` command/init/read logic with
+a fake memory-mapped SDHOST controller; verifies both SDHC
+and SDSC command sequences, a 512-byte PIO read, data error
+propagation, invalid RCA and bounded timeout handling.
+No physical Pi3 registers or SD card were accessed.
+
+The test target is guarded by `FRF_SDHOST_MOCK` and is not
+compiled into the ARM32 firmware. The original storage
+image's SHA-256 is unchanged after the mock backend was added.
