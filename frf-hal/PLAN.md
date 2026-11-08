@@ -67,8 +67,11 @@ observations. Never publish a Stage-0 image as a finished arcade kernel.
   compile/link verified, real interrupt count pending.
 - [x] Standalone USB HCD power property test and DWC2 register probe:
   compile/link verified; real Pi3 power test pending.
-- [ ] Replace the existing `baremetal/tinyusb/frf_tusb_host.cpp`
-  Circle mailbox dependency in a **new** FRF-HAL-target build, without
-  editing the working legacy Circle code. Existing FRF HID logic stays.
+- [x] Independently linked MIT TinyUSB DWC2, hub and HID **diagnostic**
+  with FRF mailbox USB power and freestanding runtime: compile/link
+  verified; no Circle link dependencies. Physical Pi 3 enumeration pending.
+- [ ] Adapt existing `baremetal/tinyusb/frf_tusb_host.cpp` HID mappings
+  to an independent FRF-HAL kernel build, without modifying the legacy
+  Circle source or using GPL-covered implementation.
 - [ ] Independent multicore, SD/eMMC and FatFs, HDMI PCM,
   C/C++ runtime + newlib support, full MAME link, functionality tests.

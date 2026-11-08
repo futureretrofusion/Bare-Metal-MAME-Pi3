@@ -81,3 +81,39 @@ check-usbpower: usbpower
 
 clean:
 	rm -rf $(BUILD)
+
+# Experimental isolated TinyUSB enumeration diagnostic (Stage 2 follow-on) (NO Circle).
+# Deliberately separate from old circle-kernel and all MAME link targets.
+TUSB_ROOT := ../third_party/frf_tinyusb_mame/src
+TUSB_CFLAGS := $(COMMON) -std=c11 -O2 -I. -I$(TUSB_ROOT) -DFRF_USB_TINYUSB=1
+USBHOST_OBJS := $(BOOT_OBJS) $(BUILD)/mailbox.o $(BUILD)/usb_power.o \
+    $(BUILD)/usb_runtime.o $(BUILD)/main_usbhost.o \
+    $(BUILD)/tusb_core.o $(BUILD)/tusb_fifo.o $(BUILD)/tusb_usbh.o \
+    $(BUILD)/tusb_hub.o $(BUILD)/tusb_hid_host.o \
+    $(BUILD)/tusb_dwc2.o $(BUILD)/tusb_dwc2_common.o
+.PHONY: usbhost check-usbhost
+usbhost: $(BUILD)/frf-hal-usbhost.img
+$(BUILD)/tusb_core.o: $(TUSB_ROOT)/tusb.c tusb_config.h | $(BUILD)
+	$(CC) $(TUSB_CFLAGS) -c -o $@ $<
+$(BUILD)/tusb_fifo.o: $(TUSB_ROOT)/common/tusb_fifo.c tusb_config.h | $(BUILD)
+	$(CC) $(TUSB_CFLAGS) -c -o $@ $<
+$(BUILD)/tusb_usbh.o: $(TUSB_ROOT)/host/usbh.c tusb_config.h | $(BUILD)
+	$(CC) $(TUSB_CFLAGS) -c -o $@ $<
+$(BUILD)/tusb_hub.o: $(TUSB_ROOT)/host/hub.c tusb_config.h | $(BUILD)
+	$(CC) $(TUSB_CFLAGS) -c -o $@ $<
+$(BUILD)/tusb_hid_host.o: $(TUSB_ROOT)/class/hid/hid_host.c tusb_config.h | $(BUILD)
+	$(CC) $(TUSB_CFLAGS) -c -o $@ $<
+$(BUILD)/tusb_dwc2.o: $(TUSB_ROOT)/portable/synopsys/dwc2/hcd_dwc2.c tusb_config.h | $(BUILD)
+	$(CC) $(TUSB_CFLAGS) -c -o $@ $<
+$(BUILD)/tusb_dwc2_common.o: $(TUSB_ROOT)/portable/synopsys/dwc2/dwc2_common.c tusb_config.h | $(BUILD)
+	$(CC) $(TUSB_CFLAGS) -c -o $@ $<
+$(BUILD)/main_usbhost.o: main_usbhost.c tusb_config.h | $(BUILD)
+	$(CC) $(CFLAGS) -I. -I$(TUSB_ROOT) -DFRF_USB_TINYUSB=1 -c -o $@ $<
+$(BUILD)/frf-hal-usbhost.elf: $(USBHOST_OBJS) linker.ld
+	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-usbhost.map -o $@ $(USBHOST_OBJS) -lgcc
+$(BUILD)/frf-hal-usbhost.img: $(BUILD)/frf-hal-usbhost.elf
+	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $(BUILD)/frf-hal-usbhost.elf
+check-usbhost: usbhost
+	$(OBJDUMP) -h $(BUILD)/frf-hal-usbhost.elf
+	$(NM) -u $(BUILD)/frf-hal-usbhost.elf

@@ -101,3 +101,23 @@ test pages. Do not claim either test passed until actual observations
 are recorded.
 
 See `README.md`, `STAGE1-TEST.md`, `STAGE2-TEST.md`, `USBPOWER-TEST.md`, `PLAN.md`.
+
+## Independent TinyUSB host diagnostic (8 November 2026)
+Command: `make -C frf-hal check-usbhost`.
+
+- ARM32 compile/link: **PASS**, GNU Arm Embedded 14.2.1.
+- Freestanding image: `frf-hal/build/frf-hal-usbhost.img`.
+- Executable ELF text **29,623**, data **57**, BSS **27,360** bytes.
+- `arm-none-eabi-nm -u`: **no undefined symbols**.
+- Circle/Circle-stdlib/libsound/newlib name matches in link map: **none**.
+- Linked vendor pieces: MIT TinyUSB core, FIFO, USB host, hub, HID,
+  Synopsys DWC2 HCD and DWC2 common; independent boot/USB power/runtime.
+- Image SHA-256:
+  `a695b02f8d27a580f84309ac2108b18ceeec228cbe321e28890edb939ddb3fa9`.
+- ELF SHA-256:
+  `94d0a91768d697308542b39eb43db431dec4a76732b232bc8e2dabb2281803ef`.
+- **Hardware boot, DWC2 initialization, hub and HID enumeration:
+  NOT TESTED.** No MAME runtime or gamepad input is integrated.
+- The existing Stage 0, Stage 1, Stage 2 and USB-power check targets
+  were re-run successfully after adding this independent target.
+- See `USBHOST-TEST.md` for safe test-card procedure.

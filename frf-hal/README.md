@@ -59,3 +59,12 @@ but none is yet certified booting on a physical Pi 3.
 The independent USB HCD power service is tested at compile/link level
 using `make -C frf-hal check-usbpower`. See `USBPOWER-TEST.md`. It is
 not yet connected to the existing FRF TinyUSB controller implementation.
+
+## Standalone TinyUSB / DWC2 diagnostic
+
+`make -C frf-hal check-usbhost` builds `build/frf-hal-usbhost.img`
+using an independent boot/runtime and existing MIT TinyUSB host,
+hub, DWC2 and HID modules. **Cross-compile/link verified only; no Pi 3
+USB enumeration proven.** See `USBHOST-TEST.md`. The image logs USB
+mount counts and raw HID reports to PL011; it does not run MAME, map
+pads into MAME or replace the legacy production kernel.
