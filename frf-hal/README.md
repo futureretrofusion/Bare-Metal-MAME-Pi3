@@ -55,3 +55,7 @@ and `make -C frf-hal check-stage2` for a 100Hz system-timer IRQ smoke
 test. These are separate images; the original Stage-0 image is preserved.
 See `STAGE1-TEST.md` and `STAGE2-TEST.md`. All stages are compiled,
 but none is yet certified booting on a physical Pi 3.
+
+The independent USB HCD power service is tested at compile/link level
+using `make -C frf-hal check-usbpower`. See `USBPOWER-TEST.md`. It is
+not yet connected to the existing FRF TinyUSB controller implementation.

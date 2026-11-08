@@ -56,3 +56,19 @@ MAME name before any combined binary release.
 
 All stages require independent compile/link checks and Pi3 hardware
 observations. Never publish a Stage-0 image as a finished arcade kernel.
+
+## Current implementation checkpoint (8 November 2026)
+- [x] Independent firmware ARM32 entry (including HYP-to-SVC),
+  BSS clearing, per-mode stacks, VBAR vectors, PL011 serial and timer:
+  compiled/link verified; **Pi3 boot not yet tested**.
+- [x] Independently built firmware mailbox client and double-height
+  RGB565 framebuffer test: compile/link verified, HDMI test pending.
+- [x] Standalone BCM2837 IRQ controller + compare1 timer test:
+  compile/link verified, real interrupt count pending.
+- [x] Standalone USB HCD power property test and DWC2 register probe:
+  compile/link verified; real Pi3 power test pending.
+- [ ] Replace the existing `baremetal/tinyusb/frf_tusb_host.cpp`
+  Circle mailbox dependency in a **new** FRF-HAL-target build, without
+  editing the working legacy Circle code. Existing FRF HID logic stays.
+- [ ] Independent multicore, SD/eMMC and FatFs, HDMI PCM,
+  C/C++ runtime + newlib support, full MAME link, functionality tests.

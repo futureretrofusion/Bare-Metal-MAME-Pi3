@@ -61,13 +61,30 @@ Command: `make -C frf-hal check-stage2`
   disables other interrupt banks and treats unexpected sources as errors.
 - Physical Pi 3 IRQ frequency and interrupt behaviour: **NOT TESTED**.
 
+## USB-power diagnostic (separate image)
+Command: `make -C frf-hal check-usbpower`
+
+- Clean ARM32 compile/link: **PASS** (exit 0)
+- Undefined symbols `arm-none-eabi-nm -u`: **none**
+- Circle/CStdlib/libsound/newlib matches in link map: **none**
+- Raw image: **2,281 bytes**; BSS **21,536** bytes
+- Raspberry Pi firmware power tag `0x00028001`, USB HCD device 3,
+  on+wait; diagnostic reads BCM2837 DWC2 core ID and port register.
+- Raw image SHA-256:
+  `d8e876d06bf122bd5ea585abc75b758107b9dd852b26fa3c65ddc35815bb0e53`
+- ELF SHA-256:
+  `02b2995c3cceb59bbec94ca512292c5dbbc7d6b130d92c7b74885f225bbff4d2`
+- This is **not** a compiled TinyUSB host; no pads/USB devices are
+  enumerated in this diagnostic.
+- Physical Pi 3 USB power property + DWC2 ID: **NOT TESTED**.
+
 ## NOT yet verified
 - No Pi 3 serial/HDMI boot test; **hardware status UNKNOWN**.
 - No exception fault-injection test.
 - No UART baud, timer drift, 640x480 framebuffer, VBlank or page
   tear/flicker observations on physical Pi hardware.
 - `qemu-system-arm` is unavailable on Studio Main.
-- No independent SD/FAT, TinyUSB glue, multicore, HDMI
+- No independent SD/FAT, integrated TinyUSB host, multicore, HDMI
   audio or full MAME emulator link yet.
 - The complete combined binary's third-party licence/trademark
   audit remains open; removing Circle alone is insufficient for
@@ -83,4 +100,4 @@ separate build, and photograph/scope the Stage 1 alternating RGB565
 test pages. Do not claim either test passed until actual observations
 are recorded.
 
-See `README.md`, `STAGE1-TEST.md`, `STAGE2-TEST.md`, `PLAN.md`.
+See `README.md`, `STAGE1-TEST.md`, `STAGE2-TEST.md`, `USBPOWER-TEST.md`, `PLAN.md`.
