@@ -68,3 +68,31 @@ hub, DWC2 and HID modules. **Cross-compile/link verified only; no Pi 3
 USB enumeration proven.** See `USBHOST-TEST.md`. The image logs USB
 mount counts and raw HID reports to PL011; it does not run MAME, map
 pads into MAME or replace the legacy production kernel.
+
+## 8 November independent HAL expansion
+
+All images are standalone test binaries, built from the independent
+`frf-independent-hal` worktree, **not** the full MAME emulator.
+
+| Make target | Output image | Purpose |
+|---|---|---|
+| `check-mmu` | `frf-hal-mmu.img` | Cortex-A53 ARM32 identity MMU + caches |
+| `check-smp` | `frf-hal-smp.img` | Cores 1–3 release and shared IPC |
+| `check-irq-router` | `frf-hal-irq-router.img` | Shared GPU IRQ dispatch + timer |
+| `check-usbhost` | `frf-hal-usbhost.img` | TinyUSB/HID + original FRF generic decoder |
+| `check-video` | `frf-hal-video.img` | Existing FRF 2x scaler, scanline LUT, mailbox flip |
+
+Run the host tests: `make -C frf-hal host-test-mmu host-test-smp
+host-test-input host-test-dma host-test-irq-router`.
+
+Only one image is intended to run at a time on a **disposable test SD**.
+All targets have ARM32 compile/link verification; **no physical Pi3
+tests are recorded**. See `HARDWARE-TESTS.md` for configuration and
+precise acceptance conditions. The old MAME 0.106/FRF UI, drivers,
+ROM indexing, audio and storage interfaces are not linked yet.
+
+The earlier `frf_known_pads.h` special-case controller code is excluded
+from independent HAL builds because its header references a USPi port,
+whose upstream code is GPLv3. The generic FRF HID parser is retained
+without modifying its original source. Further provenance review applies
+to the modified TinyUSB port and all other linked components.

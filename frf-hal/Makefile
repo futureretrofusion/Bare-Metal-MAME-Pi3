@@ -87,7 +87,7 @@ clean:
 TUSB_ROOT := ../third_party/frf_tinyusb_mame/src
 TUSB_CFLAGS := $(COMMON) -std=c11 -O2 -I. -I$(TUSB_ROOT) -DFRF_USB_TINYUSB=1
 USBHOST_OBJS := $(BOOT_OBJS) $(BUILD)/mailbox.o $(BUILD)/usb_power.o \
-    $(BUILD)/usb_runtime.o $(BUILD)/main_usbhost.o \
+    $(BUILD)/usb_runtime.o $(BUILD)/main_usbhost.o $(BUILD)/input.o $(BUILD)/dma.o \
     $(BUILD)/tusb_core.o $(BUILD)/tusb_fifo.o $(BUILD)/tusb_usbh.o \
     $(BUILD)/tusb_hub.o $(BUILD)/tusb_hid_host.o \
     $(BUILD)/tusb_dwc2.o $(BUILD)/tusb_dwc2_common.o
@@ -117,3 +117,87 @@ $(BUILD)/frf-hal-usbhost.img: $(BUILD)/frf-hal-usbhost.elf
 check-usbhost: usbhost
 	$(OBJDUMP) -h $(BUILD)/frf-hal-usbhost.elf
 	$(NM) -u $(BUILD)/frf-hal-usbhost.elf
+
+# Isolated Pi3 Cortex-A53 ARM32 short-descriptor MMU/cache smoke test.
+MMU_OBJS := $(BOOT_OBJS) $(BUILD)/mmu.o $(BUILD)/mmu_arm.o $(BUILD)/main_mmu.o
+.PHONY: mmu check-mmu host-test-mmu
+mmu: $(BUILD)/frf-hal-mmu.img
+$(BUILD)/mmu_arm.o: mmu_arm.S mmu.h | $(BUILD)
+	$(CC) $(ASFLAGS) -c -o $@ $<
+$(BUILD)/frf-hal-mmu.elf: $(MMU_OBJS) linker.ld
+	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-mmu.map -o $@ $(MMU_OBJS)
+$(BUILD)/frf-hal-mmu.img: $(BUILD)/frf-hal-mmu.elf
+	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $(BUILD)/frf-hal-mmu.elf
+check-mmu: mmu
+	$(OBJDUMP) -h $(BUILD)/frf-hal-mmu.elf
+	$(NM) -u $(BUILD)/frf-hal-mmu.elf
+host-test-mmu: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -ffunction-sections -fdata-sections -Wl,--gc-sections -o $(BUILD)/host-test-mmu tests/test_mmu.c mmu.c
+	$(BUILD)/host-test-mmu
+HOSTCC ?= gcc
+
+# Independent multicore firmware mailbox3 wakeup + per-core IPC diagnostic.
+SMP_OBJS := $(BOOT_OBJS) $(BUILD)/smp.o $(BUILD)/main_smp.o
+.PHONY: smp check-smp host-test-smp
+smp: $(BUILD)/frf-hal-smp.img
+$(BUILD)/frf-hal-smp.elf: $(SMP_OBJS) linker.ld
+	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-smp.map -o $@ $(SMP_OBJS)
+$(BUILD)/frf-hal-smp.img: $(BUILD)/frf-hal-smp.elf
+	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $(BUILD)/frf-hal-smp.elf
+check-smp: smp
+	$(OBJDUMP) -h $(BUILD)/frf-hal-smp.elf
+	$(NM) -u $(BUILD)/frf-hal-smp.elf
+host-test-smp: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -o $(BUILD)/host-test-smp tests/test_smp.c
+	$(BUILD)/host-test-smp
+
+# Independently compiled FRF HID descriptor decoder for standalone TinyUSB.
+CXX := $(CROSS_COMPILE)g++
+$(BUILD)/input.o: input.cpp input.h ../baremetal/tinyusb/frf_hid_gamepad.h | $(BUILD)
+	$(CXX) $(COMMON) -std=c++17 -O2 -Wall -Wextra -Werror -fno-exceptions -fno-rtti -fno-use-cxa-atexit -c -o $@ $<
+.PHONY: host-test-input
+host-test-input: | $(BUILD)
+	g++ -std=c++17 -O2 -Wall -Wextra -Werror -o $(BUILD)/host-test-input input.cpp tests/test_input.cpp
+	$(BUILD)/host-test-input
+
+# Standalone DMA address/cache-maintenance integration and host checks.
+.PHONY: host-test-dma
+host-test-dma: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -o $(BUILD)/host-test-dma tests/test_dma.c dma.c
+	$(BUILD)/host-test-dma
+
+# Video integration: original FRF renderer linked to independent framebuffer.
+# The Circle screen implementation is not built or copied.
+VIDEO_OBJS := $(BOOT_OBJS) $(BUILD)/usb_runtime.o $(BUILD)/mailbox.o \
+    $(BUILD)/framebuffer.o $(BUILD)/bm_timer_hal.o $(BUILD)/bm_video.o \
+    $(BUILD)/main_video.o
+.PHONY: video check-video
+video: $(BUILD)/frf-hal-video.img
+$(BUILD)/bm_video.o: ../baremetal/bm_video.c ../baremetal/bm_platform.h | $(BUILD)
+	$(CC) $(CFLAGS) -Wno-error=unused-variable -DFRF_MAME_FAST=1 -c -o $@ $<
+$(BUILD)/frf-hal-video.elf: $(VIDEO_OBJS) linker.ld
+	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-video.map -o $@ $(VIDEO_OBJS) -lgcc
+$(BUILD)/frf-hal-video.img: $(BUILD)/frf-hal-video.elf
+	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $(BUILD)/frf-hal-video.elf
+check-video: video
+	$(OBJDUMP) -h $(BUILD)/frf-hal-video.elf
+	$(NM) -u $(BUILD)/frf-hal-video.elf
+
+# Shared, non-destructive GPU IRQ routing with timer1 diagnostic.
+IRQROUTER_OBJS := $(BOOT_OBJS) $(BUILD)/irq_router.o $(BUILD)/main_irq_router.o
+.PHONY: irq-router check-irq-router host-test-irq-router
+irq-router: $(BUILD)/frf-hal-irq-router.img
+$(BUILD)/frf-hal-irq-router.elf: $(IRQROUTER_OBJS) linker.ld
+	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-irq-router.map -o $@ $(IRQROUTER_OBJS)
+$(BUILD)/frf-hal-irq-router.img: $(BUILD)/frf-hal-irq-router.elf
+	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $(BUILD)/frf-hal-irq-router.elf
+check-irq-router: irq-router
+	$(OBJDUMP) -h $(BUILD)/frf-hal-irq-router.elf
+	$(NM) -u $(BUILD)/frf-hal-irq-router.elf
+host-test-irq-router: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -o $(BUILD)/host-test-irq-router tests/test_irq_router.c irq_router.c
+	$(BUILD)/host-test-irq-router

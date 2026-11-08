@@ -75,3 +75,35 @@ observations. Never publish a Stage-0 image as a finished arcade kernel.
   Circle source or using GPL-covered implementation.
 - [ ] Independent multicore, SD/eMMC and FatFs, HDMI PCM,
   C/C++ runtime + newlib support, full MAME link, functionality tests.
+
+## Second development checkpoint — independent MMU, SMP, HID and video
+
+- [x] Short-descriptor MMU + I/D-cache standalone diagnostic with host-checked
+  1 MiB identity sections, RAM WBWA, device XN, and fault mappings.
+  **Physical Pi3 boot and cache coherency NOT TESTED.**
+- [x] Multicore boot assembly extended for firmware mailbox3 spin table
+  and cores entering `_start` directly. Distinct secondary stacks, explicit
+  release, one-producer/one-worker IPC and host sequence tests compiled.
+  **No Pi3 secondary core startup has been observed.**
+- [x] Shared IRQ dispatch across GPU banks 1/2 and basic IRQs; host tests
+  passed. IRQ router's timer1 physical test has not been run.
+- [x] Experimental independent USB host linked to original FRF generic
+  descriptor parser, without Circle; keyboard/pad masks and reports are
+  exported separately for later MAME integration. Host parser tests passed.
+  Known-pad routines with uncertain USPi GPL provenance are excluded.
+- [x] BCM2837 DMA address conversion and CP15 cache range helpers compile;
+  host translation/bounds tests passed. **USB diagnostic still runs
+  uncached**. Do not enable caches for live USB/VideoCore DMA until
+  an aligned ownership/bounce-buffer policy is hardware validated.
+- [x] Existing `baremetal/bm_video.c` RGB565 integer scaler, scanlines
+  and double-height framebuffer linked into a separate independent
+  test image; no copy of GPL Circle `screen_dbuf.cpp`. Not yet display-tested.
+- [ ] Full C/C++ memory runtime (allocation, POSIX, file/time APIs).
+- [ ] SD/eMMC card initialization, permissions-verified FatFs and ROM indexing.
+- [ ] HDMI PCM without GPL VCHIQ/Circle sound services.
+- [ ] Shared working image combining video + USB + cores + storage + sound.
+- [ ] Link `mamecore` and `mamecoreUNROLL` with original drivers and FRF UI.
+- [ ] Hardware acceptance and complete exact-binary legal/provenance audit.
+
+**Important:** All new hardware images are **isolated diagnostics**, not
+a playable MAME kernel. The Circle production tree remains untouched.

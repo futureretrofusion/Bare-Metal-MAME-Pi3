@@ -75,11 +75,61 @@ frf_privilege_ready:
     b 3b
 
 frf_secondary_park:
-    /* No secondary-core release is attempted at this milestone. */
+    /* Park with core id in r4. Primary clears BSS before releasing us.
+       Support both firmware-spun mailbox3 entry and cores already in _start. */
+    mov r4, r0
+    ldr r5, =frf_secondary_release_mask
+    mov r7, #1
+    lsl r7, r7, r4
 4:
+    ldr r6, [r5]
+    tst r6, r7
+    bne 8f
     wfe
     b 4b
+8:
+    dmb sy
+    /* Secondary cores may also be handed to us by firmware in HYP mode. */
+    mrs r0, cpsr
+    and r1, r0, #0x1f
+    cmp r1, #0x1a
+    bne 5f
+    bic r0, r0, #0x1f
+    orr r0, r0, #0xd3
+    msr spsr_cxsf, r0
+    adr r1, 5f
+    msr ELR_hyp, r1
+    eret
+5:
+    mrc p15, 0, r0, c1, c0, 0
+    bic r0, r0, #4
+    bic r0, r0, #0x2000
+    mcr p15, 0, r0, c1, c0, 0
+    dsb sy
+    isb
+    cps #0x13
+    ldr r0, =frf_secondary_stacks
+    add r0, r0, r4, lsl #12
+    mov sp, r0
+    ldr r0, =frf_exception_vectors
+    mcr p15, 0, r0, c12, c0, 0
+    isb
+    mov r0, r4
+    bl frf_hal_secondary_entry
+6:
+    wfe
+    b 6b
 .size _start, . - _start
+
+/* A build without smp.c never releases secondaries. The fallback is
+   an inert loop; linking smp.c provides the strong worker entry. */
+.weak frf_hal_secondary_entry
+.type frf_hal_secondary_entry, %function
+frf_hal_secondary_entry:
+7:
+    wfe
+    b 7b
+
 
 .section .text, "ax", %progbits
 .balign 32
@@ -139,3 +189,15 @@ frf_fiq_stack: .space 1024
 frf_fiq_stack_end:
 frf_svc_stack: .space 16384
 frf_svc_stack_end:
+
+/* Release flag must be present in the loaded image, initialized to
+   zero BEFORE cores 1..3 can look at it, not in uncleared BSS. */
+.section .data.smp, "aw", %progbits
+.balign 64
+.global frf_secondary_release_mask
+frf_secondary_release_mask: .word 0
+
+/* Separate 4 KiB SVC stacks for secondary cores. */
+.section .bss.smp, "aw", %nobits
+.balign 16
+frf_secondary_stacks: .space 12288

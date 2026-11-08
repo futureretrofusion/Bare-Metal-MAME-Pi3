@@ -9,6 +9,8 @@
  */
 #include "hal.h"
 #include "usb_power.h"
+#include "input.h"
+#include "dma.h"
 #include <stdint.h>
 #include <stddef.h>
 #include "tusb.h"
@@ -45,15 +47,11 @@ uint32_t tusb_time_millis_api(void)
  * A subsequent cached/multicore port must supply real cache maintenance.
  */
 void *tusb_app_virt_to_phys(void *ptr)
-{
-    const uintptr_t a = (uintptr_t)ptr;
-    if (!ptr || a >= 0x40000000u) return NULL;
-    return (void *)(uintptr_t)(a | 0xC0000000u);
-}
+{ return (void *)frf_hal_dma_bus_address(ptr); }
 void arm_flush_cache(uintptr_t addr, uint32_t size)
-{ (void)addr; (void)size; __asm__ volatile("dsb sy" ::: "memory"); }
+{ (void)frf_hal_dma_clean((const void *)addr, size); }
 void arm_dcache_invalidate(uintptr_t addr, uint32_t size)
-{ (void)addr; (void)size; __asm__ volatile("dsb sy" ::: "memory"); }
+{ (void)frf_hal_dma_invalidate((const void *)addr, size); }
 void tusb_app_dcache_flush(uintptr_t addr, uint32_t size)
 { arm_flush_cache(addr, size); }
 void tusb_app_dcache_invalidate(uintptr_t addr, uint32_t size)
@@ -102,13 +100,17 @@ void tuh_umount_cb(uint8_t address)
 void tuh_hid_mount_cb(uint8_t address, uint8_t instance,
                        const uint8_t *desc, uint16_t len)
 {
-    (void)desc; (void)len;
+    uint16_t vid = 0u, pid = 0u;
+    tuh_vid_pid_get(address, &vid, &pid);
+    frf_hal_input_mount(address, instance, vid, pid,
+                        (uint8_t)tuh_hid_interface_protocol(address, instance),
+                        desc, len);
     ++hid_mount_count;
     frf_hal_uart_puts("HID interface mounted\n");
     (void)tuh_hid_receive_report(address, instance);
 }
 void tuh_hid_umount_cb(uint8_t address, uint8_t instance)
-{ (void)address; (void)instance; }
+{ frf_hal_input_unmount(address, instance); }
 void tuh_hid_report_received_cb(uint8_t address, uint8_t instance,
                                  const uint8_t *data, uint16_t len)
 {
@@ -118,11 +120,14 @@ void tuh_hid_report_received_cb(uint8_t address, uint8_t instance,
         word |= (uint32_t)data[i] << (8u * i);
     last_report_word = word;
     last_report_size = len;
+    frf_hal_input_report(address, instance, data, len);
     ++hid_report_count;
     (void)tuh_hid_receive_report(address, instance);
 }
 static void dump_status(void)
 {
+    uint32_t input[5] = {0u};
+    frf_hal_input_snapshot(input);
     frf_hal_uart_puts("mount=");
     frf_hal_uart_hex32(mount_count);
     frf_hal_uart_puts(" live=");
@@ -139,6 +144,16 @@ static void dump_status(void)
     frf_hal_uart_hex32(last_report_size);
     frf_hal_uart_puts(" first4=");
     frf_hal_uart_hex32(last_report_word);
+    frf_hal_uart_puts(" PAD=");
+    frf_hal_uart_hex32(input[0]);
+    frf_hal_uart_puts(" KBD=");
+    frf_hal_uart_hex32(input[1]);
+    frf_hal_uart_puts(" parsed_pad_reports=");
+    frf_hal_uart_hex32(input[2]);
+    frf_hal_uart_puts(" parsed_kbd_reports=");
+    frf_hal_uart_hex32(input[3]);
+    frf_hal_uart_puts(" decoder=");
+    frf_hal_uart_hex32(input[4]);
     frf_hal_uart_puts("\n");
 }
 

@@ -1,3 +1,8 @@
+> **Latest verification supersedes old size/hash entries below.**
+> Expanding `boot.S` for secondary cores changed the diagnostic binary
+> layout; previously recorded historical checksums remain archival.
+> The authoritative current image hashes appear at the end of this file.
+
 # FRF HAL — Studio Main build verification
 
 Copyright © 2026 Future Retro Fusion.
@@ -121,3 +126,50 @@ Command: `make -C frf-hal check-usbhost`.
 - The existing Stage 0, Stage 1, Stage 2 and USB-power check targets
   were re-run successfully after adding this independent target.
 - See `USBHOST-TEST.md` for safe test-card procedure.
+
+## Current clean-build matrix — 8 November 2026
+
+Command executed on Studio Main:
+
+```sh
+make -C frf-hal clean
+make -C frf-hal check check-stage1 check-stage2 check-usbpower \
+  check-usbhost check-mmu check-smp check-video check-irq-router \
+  host-test-mmu host-test-smp host-test-input host-test-dma \
+  host-test-irq-router
+```
+
+**Result: PASS (exit 0)**, 9 ARM32 firmware images linked and 5 native
+host protocol/logic tests ran to completion. The independent UART,
+mailbox, TinyUSB/DWC2, FRF HID adapter, DMA, original FRF scaler and
+IRQ router contain no external Circle link dependencies in these images.
+
+| Image | ARM ELF text | BSS | SHA256 of raw image |
+|---|---:|---:|---|
+| stage0 | 1849 | 33808 | `06efc4afa348d492414f9df505113b31ec1f926300da9390e7e6d0ee4fc4d656` |
+| stage1 | 3273 | 33984 | `21c259fe56ac55be4989522788311e255c79135cecb85be4bcaadfaa3260ed4b` |
+| stage2 | 2017 | 33808 | `01a2ae434c87768bebb6de191f8d2d9894863dc666597f6734a09eccfe0457a2` |
+| usbpower | 2441 | 33824 | `f0d57303eca19ca6f98b6e4fc2f7bb66ad9da1d55c0316d8d4da62d63fd86a0e` |
+| usbhost | 35159 | 40160 | `c00b79d386e815755efe580bad74856207a2d5c68a8e394cb6572b077d3064eb` |
+| mmu | 2093 | 67584 | `54c7d6fe91a8830ab4b189e88c7b4edbaef86ee2c5b9d30c849a1d2c96261720` |
+| smp | 2605 | 33872 | `dc054c95d54478bc543c10ea2fd55e770e0ad48893d2bad4b2c9557aa883586e` |
+| video | 7125 | 581088 | `e6394cca6fc9c13f2cbd4b29b1366241765b3e0bfadbd8c43d63983197d93552` |
+| irq-router | 2377 | 34384 | `e8e8ea5f787589fbb0cffbb45ddf9aab5b683bd65de7796160338b16f1c42baf` |
+
+- All nine `arm-none-eabi-nm -u` checks reported no unresolved symbols.
+- Regex audit of five expanded link maps for
+  Circle/Circle-stdlib/libsound/newlib/screen_dbuf names returned zero matches.
+- Original `baremetal/bm_video.c` emits **one unused-variable warning**
+  under strict GCC 14.2.1; local `-Wno-error=unused-variable` allows
+  compiling it **without altering legacy source**.
+- **Hardware boot: NOT TESTED for any of these binaries.**
+- **No emulator CPU core, ROM files, SD/FAT or HDMI PCM in these images.**
+- DMAC/cache helpers must not be treated as validated coherent DMA on Pi 3;
+  D-cache remains disabled in TinyUSB and framebuffer images.
+- Independent HAL binary release remains **not legally cleared**; full
+  provenance, licence, name/wordmark and exact linking review is required.
+
+- The startup release flag is now initialized in the loaded `.data`
+  image, not in uninitialized BSS. This prevents secondary cores from
+  misreading stale memory before CPU0 has cleared the BSS. All nine
+  ARM32 targets and all five host tests passed again after that change.

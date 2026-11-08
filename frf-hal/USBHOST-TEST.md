@@ -63,3 +63,22 @@ host is **not proof of USB enumeration**.
 - Original legacy `circle-kernel` is not modified or linked.
 - Real hardware and exact image checksums must be recorded before
   a test may be labeled PASS.
+
+## New input/DMA adapters (latest revision)
+The raw HID reports now additionally update `PAD`, `KBD`,
+`parsed_pad_reports`, `parsed_kbd_reports` and `decoder` serial
+counters, using original FRF generic HID descriptor parsing and a
+Circle-free C API. Host synthetic keyboard/gamepad tests passed. This
+does **not** yet feed the MAME frontend or reproduce all proprietary
+vendor report initialization sequences.
+
+The BCM2837 DMA cache routines now exist in `dma.c`, including
+ARM cache-line measurement and aligned invalidation constraints, but
+the standalone USB host still executes with its data cache disabled.
+Contrary to the earlier wording above, cache hooks are no longer
+always barriers-only; they perform CP15 maintenance if D-cache is on.
+**This does not authorize enabling D-cache during USB DMA**: exact
+buffer ownership, bounce-buffering and hardware testing are still open.
+
+The older image SHA256 in the previous sections was superseded by
+the latest clean-build matrix in `BUILD-VERIFICATION.md`.
