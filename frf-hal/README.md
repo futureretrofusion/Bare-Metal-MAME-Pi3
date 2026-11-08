@@ -96,3 +96,24 @@ from independent HAL builds because its header references a USPi port,
 whose upstream code is GPLv3. The generic FRF HID parser is retained
 without modifying its original source. Further provenance review applies
 to the modified TinyUSB port and all other linked components.
+
+## Additional standalone diagnostic images
+
+The optional FRF GUI target uses the existing project-authored
+`circle-kernel/frf_gui.cpp`, its original font/banner and a small
+independent diagnostic snprintf implementation. It does **not** use the
+Circle screen/source or Circle-stdlib.
+
+```sh
+make -C frf-hal -f Makefile -f gui.mk check-gui
+make -C frf-hal check-storage host-test-fat32 host-test-sdhost
+make -C frf-hal -f Makefile -f gui.mk -f rommenu.mk check-rommenu
+make -C frf-hal -f Makefile -f gui.mk host-test-mini-runtime
+```
+
+`frf-hal-gui.img`: 720p menu selection animation with fixed
+diagnostic entries. `frf-hal-storage.img`: read-only SDHOST and
+FAT32 UART probe. `frf-hal-rommenu.img`: original FRF graphics plus
+read-only FAT32 `/roms` ZIP names (no game launching).
+See `GUI-TEST.md`, `STORAGE-TEST.md`, `ROMMENU-TEST.md` and
+`BUILD-VERIFICATION.md`. Hardware boot remains unverified.

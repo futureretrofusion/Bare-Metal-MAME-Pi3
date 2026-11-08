@@ -173,3 +173,72 @@ IRQ router contain no external Circle link dependencies in these images.
   image, not in uninitialized BSS. This prevents secondary cores from
   misreading stale memory before CPU0 has cleared the BSS. All nine
   ARM32 targets and all five host tests passed again after that change.
+
+## Continued build matrix (8 November 2026, Studio Main)
+
+All tests below ran in the isolated `frf-independent-hal` worktree,
+without writing the production SD card or editing the Circle v1.15 kernel.
+
+Clean build command:
+
+```sh
+make -C frf-hal clean
+make -C frf-hal -f Makefile -f gui.mk check check-stage1 check-stage2 \
+  check-usbpower check-usbhost check-mmu check-smp check-video \
+  check-irq-router check-storage check-gui host-test-mmu host-test-smp \
+  host-test-input host-test-dma host-test-irq-router \
+  host-test-fat32 host-test-sdhost
+make -C frf-hal -f Makefile -f gui.mk -f rommenu.mk check-rommenu
+make -C frf-hal -f Makefile -f gui.mk host-test-mini-runtime
+```
+
+**RESULT: PASS:** 12 separate freestanding ARM32 images compiled/linked.
+Eight native host tests passed (including FAT32 with ASan/UBSan).
+No Circle library or Circle source code was used in these images.
+All three new ELF files showed zero undefined symbols.
+These are compilation/logic tests, **not Pi 3 hardware boots**.
+
+| Diagnostic | ELF text | Initialised data | BSS | Raw image SHA-256 |
+|---|---:|---:|---:|---|
+| SDHOST/FAT32 storage | 12,084 | 4 | 69,344 | `175495e7ea718841a402e088db7ec08c1f82cd5735d7d226e9af906a81c544a6` |
+| Original FRF 720p GUI | 259,899 | 4 | 34,048 | `f0beedf5ba5e2c36d3eb90179e6dbb6211db60ab2123dd3365e5fd7e8e730d77` |
+| FAT32 ROM directory + FRF GUI | 264,549 | 8 | 36,352 | `8cfbe0ecaf5923d43a699b7b45c1e87a73a1d3eae443a5e88fb6a9990dc75418` |
+
+The original graphics renderer and banner were compiled directly from
+`circle-kernel/frf_gui.cpp` without modifying its source; the Circle
+screen implementation `screen_dbuf.cpp` is not linked.
+
+The FAT32 image is read-only, MBR/partitionless FAT32 only, and supports
+ASCII VFAT names, directories, and fragmented-file reads. A known
+unresolved hardware risk is the Pi 3 SDHOST controller initialization and
+PIO timing; neither firmware card routing nor the data path has been
+validated on the physical board. The ROM-menu image only *lists* ZIP names:
+it does not run or validate an actual MAME ROM set.
+
+A deliberately bounded `snprintf` mini-runtime passed an additional
+native format/truncation regression. It is NOT an OS/libc substitute.
+
+All 12 image binaries remain **hardware UNTESTED** and are **not**
+authorised as public MAME binary releases.
+
+### Real formatted scratch FAT32 image
+
+A **new 128 MiB regular file** was formatted FAT32 with `mkfs.fat 4.2`
+in `frf-hal/build/` and populated using `mtools`. The fixtures are
+small text files given ZIP extensions; **no copyrighted ROM data** was
+used. The generated image is intentionally excluded from Git.
+
+Two host tests completed with AddressSanitizer and UndefinedBehaviorSanitizer:
+
+- `host-test-fat32-image`: PASS, 4 ZIP-named files, 3 matched
+  sample-driver names; long filename and actual file data verified.
+- `host-test-file-pool`: PASS, independent descriptors, interleaved
+  reads, SEEK_SET/CUR/END, EOF, pool exhaustion and close.
+- `host-test-catalog`: PASS, native synthetic directory filtering,
+  duplicate suppression and sorting.
+- `host-test-mini-runtime`: PASS, bounded diagnostic snprintf.
+
+The latest read-only SDHOST source now links the ROM catalog and
+fixed file-handle API. These are host/storage *logic* checks, not physical
+card or MAME game-launch tests. Pi 3 SDHOST pinmux/card initialization
+remains unverified on physical hardware.

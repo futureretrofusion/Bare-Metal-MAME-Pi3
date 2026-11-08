@@ -107,3 +107,27 @@ observations. Never publish a Stage-0 image as a finished arcade kernel.
 
 **Important:** All new hardware images are **isolated diagnostics**, not
 a playable MAME kernel. The Circle production tree remains untouched.
+
+## Storage/GUI milestone update — 8 November 2026
+
+- [x] Independent 1-bit BCM2837 SDHOST PIO read path (ARM32 build).
+  GPIO48–53, CMD0/CMD8/ACMD41/RCA/select and CMD17: still hardware untested.
+- [x] Original read-only FAT32 parser with MBR, ASCII VFAT long names,
+  fragmented files, seek and directories: native ASan/UBSan tests passed.
+- [x] Existing project-authored FRF 1280×720 RGB565 menu source compiled
+  unchanged against the independent mailbox/framebuffer.
+- [x] Initial ROM filename browser combines FAT32, SDHOST and the FRF menu
+  in a completely separate untested diagnostic binary. It **does not
+  execute MAME**.
+- [ ] Hardware UART boot and ROM-list/HDMI page flip confirmation.
+- [ ] Proper SD/eMMC and FAT compatibility, performance tuning,
+  filesystem writes and C/C++ ABI for full MAME.
+- [ ] Full-system ROM scan/input launch and independent audio.
+
+## Native image and file-pool tests (host-only)
+
+A separately formatted 128 MiB scratch FAT32 file, created under
+`frf-hal/build` (ignored by Git), passed `host-test-fat32-image` and
+`host-test-file-pool`. The source fixtures were synthetic text data,
+not copyrighted game ROMs. ROM-name matching and file handles pass
+host tests, but the real Pi 3 SD path and MAME core remain untested.
