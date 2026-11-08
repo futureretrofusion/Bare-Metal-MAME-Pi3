@@ -245,3 +245,19 @@ host-test-file-pool: | $(BUILD)
 host-test-sdhost-mock: | $(BUILD)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -DFRF_SDHOST_MOCK -fsanitize=address,undefined -o $(BUILD)/host-test-sdhost-mock tests/test_sdhost_mock.c sdhost.c
 	$(BUILD)/host-test-sdhost-mock
+
+# Original FRF software PCM pipeline isolated from HDMI hardware.
+AUDIO_OBJS := $(BOOT_OBJS) $(BUILD)/usb_runtime.o $(BUILD)/audio_queue.o $(BUILD)/main_audio.o
+.PHONY: audio check-audio host-test-audio
+audio: $(BUILD)/frf-hal-audio.img
+$(BUILD)/frf-hal-audio.elf: $(AUDIO_OBJS) linker.ld
+	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-audio.map -o $@ $(AUDIO_OBJS) -lgcc
+$(BUILD)/frf-hal-audio.img: $(BUILD)/frf-hal-audio.elf
+	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $(BUILD)/frf-hal-audio.elf
+check-audio: audio
+	$(OBJDUMP) -h $(BUILD)/frf-hal-audio.elf
+	$(NM) -u $(BUILD)/frf-hal-audio.elf
+host-test-audio: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -fsanitize=address,undefined -o $(BUILD)/host-test-audio tests/test_audio_queue.c audio_queue.c
+	$(BUILD)/host-test-audio
