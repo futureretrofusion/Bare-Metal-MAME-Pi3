@@ -17,10 +17,12 @@ LDFLAGS := -nostdlib -nostartfiles -Wl,--gc-sections \
 BOOT_OBJS := $(BUILD)/boot.o $(BUILD)/hal.o
 STAGE0_OBJS := $(BOOT_OBJS) $(BUILD)/main.o
 STAGE1_OBJS := $(BOOT_OBJS) $(BUILD)/mailbox.o $(BUILD)/framebuffer.o $(BUILD)/main_fb.o
+STAGE2_OBJS := $(BOOT_OBJS) $(BUILD)/irq.o $(BUILD)/main_irq.o
 
-.PHONY: all stage1 clean check check-stage1
+.PHONY: all stage1 stage2 clean check check-stage1 check-stage2
 all: $(BUILD)/frf-hal-stage0.img
 stage1: $(BUILD)/frf-hal-stage1.img
+stage2: $(BUILD)/frf-hal-stage2.img
 
 $(BUILD):
 	mkdir -p $(BUILD)
@@ -37,6 +39,9 @@ $(BUILD)/frf-hal-stage0.elf: $(STAGE0_OBJS) linker.ld
 $(BUILD)/frf-hal-stage1.elf: $(STAGE1_OBJS) linker.ld
 	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-stage1.map -o $@ $(STAGE1_OBJS)
 
+$(BUILD)/frf-hal-stage2.elf: $(STAGE2_OBJS) linker.ld
+	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-stage2.map -o $@ $(STAGE2_OBJS)
+
 $(BUILD)/frf-hal-stage0.img: $(BUILD)/frf-hal-stage0.elf
 	$(OBJCOPY) -O binary $< $@
 	$(SIZE) $(BUILD)/frf-hal-stage0.elf
@@ -45,6 +50,10 @@ $(BUILD)/frf-hal-stage1.img: $(BUILD)/frf-hal-stage1.elf
 	$(OBJCOPY) -O binary $< $@
 	$(SIZE) $(BUILD)/frf-hal-stage1.elf
 
+$(BUILD)/frf-hal-stage2.img: $(BUILD)/frf-hal-stage2.elf
+	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $(BUILD)/frf-hal-stage2.elf
+
 check: all
 	$(OBJDUMP) -h $(BUILD)/frf-hal-stage0.elf
 	$(NM) -u $(BUILD)/frf-hal-stage0.elf
@@ -52,6 +61,10 @@ check: all
 check-stage1: stage1
 	$(OBJDUMP) -h $(BUILD)/frf-hal-stage1.elf
 	$(NM) -u $(BUILD)/frf-hal-stage1.elf
+
+check-stage2: stage2
+	$(OBJDUMP) -h $(BUILD)/frf-hal-stage2.elf
+	$(NM) -u $(BUILD)/frf-hal-stage2.elf
 
 clean:
 	rm -rf $(BUILD)

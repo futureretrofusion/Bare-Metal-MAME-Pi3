@@ -16,6 +16,7 @@ void frf_hal_uart_hex32(uint32_t value);
 uint64_t frf_hal_time_us(void);
 void frf_hal_delay_us(uint32_t us);
 void frf_hal_main(void) __attribute__((noreturn));
+void frf_hal_irq_handler(void);
 void frf_hal_exception_panic(uint32_t kind, uint32_t link,
                              uint32_t saved_psr) __attribute__((noreturn));
 #endif

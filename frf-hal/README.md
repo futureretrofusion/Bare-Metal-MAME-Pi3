@@ -27,6 +27,7 @@ image to its FAT boot partition and add these lines to its test config.txt:
 arm_64bit=0
 kernel=frf-hal-stage0.img
 enable_uart=1
+dtoverlay=disable-bt
 init_uart_clock=48000000
 ```
 
@@ -45,3 +46,12 @@ The UART baud divisor assumes firmware honours init_uart_clock=48000000.
 
 Do not distribute a combined MAME binary merely because this test works.
 See `../BINARY-RELEASE-LICENSING.md` for remaining obligations.
+
+## Additional isolated diagnostics
+
+The same independent ARM32 runtime also supports `make -C frf-hal check-stage1`
+for a polled VideoCore mailbox, RGB565 framebuffer and double-page test,
+and `make -C frf-hal check-stage2` for a 100Hz system-timer IRQ smoke
+test. These are separate images; the original Stage-0 image is preserved.
+See `STAGE1-TEST.md` and `STAGE2-TEST.md`. All stages are compiled,
+but none is yet certified booting on a physical Pi 3.

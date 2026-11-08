@@ -23,12 +23,12 @@ Command: `make -C frf-hal check`
 - Clean build and link: **PASS** (exit 0)
 - Undefined symbols `arm-none-eabi-nm -u`: **none**
 - Circle/CStdlib/libsound/newlib matches in link map: **none**
-- Raw image: **1,661 bytes**
-- ELF text: **1,661**, data **0**, BSS **21,520** bytes
+- Raw image: **1,689 bytes**
+- ELF text: **1,689**, data **0**, BSS **21,520** bytes
 - Raw image SHA-256:
-  `23debf42bc525fb1854acd5592b22c6c28f950fc3bcc7d4ba4eb5c3123cc1672`
+  `5c338cc4a9ebc923be600de041e2727de7048a3a32e29d8405dd8573ae3d635f`
 - ELF SHA-256:
-  `23f0d781505800394a0b481c6ed783a971005073266a84aef771b4640ec1b6e7`
+  `43156514f9f5dc7a791d7ccff99628efb4c1f50832d791156502ef0139724159`
 
 ## Stage 1 (mailbox/framebuffer)
 Command: `make -C frf-hal check-stage1`
@@ -36,12 +36,30 @@ Command: `make -C frf-hal check-stage1`
 - Clean build and link: **PASS** (exit 0)
 - Undefined symbols `arm-none-eabi-nm -u`: **none**
 - Circle/CStdlib/libsound/newlib matches in link map: **none**
-- Raw image: **3,085 bytes**
-- ELF text: **3,085**, data **0**, BSS **21,696** bytes
+- Raw image: **3,113 bytes**
+- ELF text: **3,113**, data **0**, BSS **21,696** bytes
 - Raw image SHA-256:
-  `0a8b03692dfe4c8588d91923315dddd7454a31a6457681dcaffdb98ca94adfcb`
+  `065c891345d733c019d4b21f700e695ba39018be108061c5a2e75fe13ffc0f73`
 - ELF SHA-256:
-  `db9bdc7d8fba7aebce61bcef40aac952e80930a86cff18383c07f0ec656584d6`
+  `e51a5a096a95c892f5aaa1fd763a8e8d1091b59436ee0e99e492c0afa906bb5a`
+
+## Stage 2 (interrupt vector + system timer compare channel 1)
+Command: `make -C frf-hal check-stage2`
+
+- Clean build and link: **PASS** (exit 0)
+- Undefined symbols `arm-none-eabi-nm -u`: **none**
+- Circle/CStdlib/libsound/newlib matches in link map: **none**
+- ARM IRQ entry saves/restores volatile registers; a dedicated C handler
+  acknowledges timer compare1 and re-arms it approximately every 10 ms.
+- Raw image: **1,861 bytes** (text 1,857 + initialised data 4).
+- ELF text **1,857**, data **4**, BSS **21,520** bytes.
+- Raw image SHA-256:
+  `a607157db48882967b2cc2f2fb3b3b559e6fb7c8c0e5ca394ea27f2c88ee71b2`
+- ELF SHA-256:
+  `c359be0e62d4186b11b26b1dbc67201f866640a300056c02e444ad1f298862f8`
+- The IRQ diagnostic is not suitable as a shared IRQ controller: it
+  disables other interrupt banks and treats unexpected sources as errors.
+- Physical Pi 3 IRQ frequency and interrupt behaviour: **NOT TESTED**.
 
 ## NOT yet verified
 - No Pi 3 serial/HDMI boot test; **hardware status UNKNOWN**.
@@ -49,7 +67,7 @@ Command: `make -C frf-hal check-stage1`
 - No UART baud, timer drift, 640x480 framebuffer, VBlank or page
   tear/flicker observations on physical Pi hardware.
 - `qemu-system-arm` is unavailable on Studio Main.
-- No independent SD/FAT, TinyUSB glue, working multicore, HDMI
+- No independent SD/FAT, TinyUSB glue, multicore, HDMI
   audio or full MAME emulator link yet.
 - The complete combined binary's third-party licence/trademark
   audit remains open; removing Circle alone is insufficient for
@@ -65,4 +83,4 @@ separate build, and photograph/scope the Stage 1 alternating RGB565
 test pages. Do not claim either test passed until actual observations
 are recorded.
 
-See `README.md`, `STAGE1-TEST.md`, `PLAN.md`.
+See `README.md`, `STAGE1-TEST.md`, `STAGE2-TEST.md`, `PLAN.md`.

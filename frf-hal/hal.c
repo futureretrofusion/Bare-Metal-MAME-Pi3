@@ -110,3 +110,11 @@ void frf_hal_exception_panic(uint32_t kind, uint32_t link, uint32_t saved_psr)
     frf_hal_uart_puts("\nHALTED\n");
     for (;;) __asm__ volatile("wfe");
 }
+
+/* Default IRQ trap for Stage 0/1, overridden only in the IRQ diagnostic.
+ * Kept as a weak hook to prevent linking an interrupt controller into
+ * early-stage images that never enable interrupts. */
+__attribute__((weak)) void frf_hal_irq_handler(void)
+{
+    frf_hal_exception_panic(6u, 0u, 0u);
+}

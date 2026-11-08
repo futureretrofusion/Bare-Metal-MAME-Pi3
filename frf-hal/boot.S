@@ -112,8 +112,12 @@ frf_vector_reserved:
     mov r0, #5
     b frf_fault
 frf_vector_irq:
-    mov r0, #6
-    b frf_fault
+    /* IRQ LR points four bytes past the interrupted instruction.
+       Save volatile AAPCS registers and return with CPSR restored. */
+    stmdb sp!, {r0-r3, r12, lr}
+    bl frf_hal_irq_handler
+    ldmia sp!, {r0-r3, r12, lr}
+    subs pc, lr, #4
 frf_vector_fiq:
     mov r0, #7
     b frf_fault
