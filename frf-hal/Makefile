@@ -201,3 +201,41 @@ check-irq-router: irq-router
 host-test-irq-router: | $(BUILD)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -o $(BUILD)/host-test-irq-router tests/test_irq_router.c irq_router.c
 	$(BUILD)/host-test-irq-router
+
+# Independent read-only Pi3 SDHOST (not Arasan) + original FAT32 parser.
+# Deliberately NOT combined with MAME, SD writer, Circle, HDMI or USB.
+STORAGE_OBJS := $(BOOT_OBJS) $(BUILD)/usb_runtime.o $(BUILD)/sdhost.o \
+    $(BUILD)/fat32.o $(BUILD)/rom_catalog.o $(BUILD)/file_pool.o $(BUILD)/main_storage.o
+.PHONY: storage check-storage host-test-fat32 host-test-sdhost
+storage: $(BUILD)/frf-hal-storage.img
+$(BUILD)/frf-hal-storage.elf: $(STORAGE_OBJS) linker.ld
+	$(CC) $(COMMON) $(LDFLAGS) -Wl,-Map,$(BUILD)/frf-hal-storage.map -o $@ $(STORAGE_OBJS) -lgcc
+$(BUILD)/frf-hal-storage.img: $(BUILD)/frf-hal-storage.elf
+	$(OBJCOPY) -O binary $< $@
+	$(SIZE) $(BUILD)/frf-hal-storage.elf
+check-storage: storage
+	$(OBJDUMP) -h $(BUILD)/frf-hal-storage.elf
+	$(NM) -u $(BUILD)/frf-hal-storage.elf
+host-test-fat32: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -fsanitize=address,undefined -o $(BUILD)/host-test-fat32 tests/test_fat32.c fat32.c
+	$(BUILD)/host-test-fat32
+host-test-sdhost: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -o $(BUILD)/host-test-sdhost tests/test_sdhost.c
+	$(BUILD)/host-test-sdhost
+
+# Native ROM-index and real formatted FAT32 image tests (scratch file only).
+.PHONY: host-test-catalog host-test-fat32-image
+host-test-catalog: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -fsanitize=address,undefined -o $(BUILD)/host-test-catalog tests/test_rom_catalog.c rom_catalog.c
+	$(BUILD)/host-test-catalog
+host-test-fat32-image: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -fsanitize=address,undefined -o $(BUILD)/host-test-fat32-image tests/test_fat32_image.c fat32.c rom_catalog.c
+	@test -n "$(FRF_FAT32_IMAGE)" || { echo "Set FRF_FAT32_IMAGE to an existing disposable FAT32 image"; exit 2; }
+	$(BUILD)/host-test-fat32-image $(FRF_FAT32_IMAGE)
+
+# Real formatted FAT32 image: fixed-size interleaved ROM file-handle API.
+.PHONY: host-test-file-pool
+host-test-file-pool: | $(BUILD)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -fsanitize=address,undefined -o $(BUILD)/host-test-file-pool tests/test_file_pool.c fat32.c file_pool.c
+	@test -n "$(FRF_FAT32_IMAGE)" || { echo "Set FRF_FAT32_IMAGE to a disposable FAT32 image"; exit 2; }
+	$(BUILD)/host-test-file-pool $(FRF_FAT32_IMAGE)
