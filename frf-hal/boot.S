@@ -41,6 +41,17 @@ frf_privilege_ready:
     mcr p15, 0, r0, c1, c0, 0
     dsb sy
     isb
+#if defined(FRF_HAL_HARD_FLOAT) && FRF_HAL_HARD_FLOAT
+    /* Permit AArch32 PL1/PL0 CP10/CP11 VFP and NEON execution.
+       The firmware may leave CPACR/FPEXC disabled. This is per-core. */
+    mrc p15, 0, r0, c1, c0, 2  /* CPACR */
+    orr r0, r0, #0x00f00000  /* CP10 and CP11 full access */
+    mcr p15, 0, r0, c1, c0, 2
+    isb
+    mov r0, #0x40000000       /* FPEXC.EN */
+    vmsr fpexc, r0
+    isb
+#endif
 
     cps #0x13                   /* SVC */
     ldr sp, =frf_svc_stack_end
@@ -107,6 +118,18 @@ frf_secondary_park:
     mcr p15, 0, r0, c1, c0, 0
     dsb sy
     isb
+#if defined(FRF_HAL_HARD_FLOAT) && FRF_HAL_HARD_FLOAT
+    /* Permit AArch32 PL1/PL0 CP10/CP11 VFP and NEON execution.
+       The firmware may leave CPACR/FPEXC disabled. This is per-core. */
+    mrc p15, 0, r0, c1, c0, 2  /* CPACR */
+    orr r0, r0, #0x00f00000  /* CP10 and CP11 full access */
+    mcr p15, 0, r0, c1, c0, 2
+    isb
+    mov r0, #0x40000000       /* FPEXC.EN */
+    vmsr fpexc, r0
+    isb
+#endif
+
     cps #0x13
     ldr r0, =frf_secondary_stacks
     add r0, r0, r4, lsl #12
